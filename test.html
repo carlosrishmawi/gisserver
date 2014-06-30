@@ -1,0 +1,109 @@
+<html>
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="jquery/jquery-ui-1.10.3.custom.min.js"></script>
+<link rel="stylesheet" href="jquery/jquery-ui-1.10.3.custom.min.css" />
+<style>
+#enter{
+   width:15px;
+   border:none;
+   border-bottom:1px solid gray;
+   outline:none;
+   }
+#enter, #hspan, .value{
+   font-family:Arial,sans-serif;
+   font-weight:normal;
+   font-size:14px;
+   line-height:20px;
+   display:inline;
+   height:20px;
+   }
+.value{
+   padding-left:5px;
+   }
+.value:after{ 
+   content:"; ";
+   }
+</style>
+<script>
+var Focus;
+var stuff= [["a","aa","aaa"],["b","bb","bbb"]];
+$(function(){
+	$( "#city" ).autocomplete({
+	source: function( request, response ) {
+	$.ajax({
+	  url: "http://ws.geonames.org/searchJSON",
+	  dataType: "jsonp",
+	  data: {
+	    featureClass: "P",
+	    style: "full",
+	    maxRows: 12,
+	    name_startsWith: request.term
+	  },
+	  success: function( data ) {
+	    response( $.map( data.geonames, function( item ) {
+	      return {
+	        label: item.name + (item.adminName1 ? ", " + item.adminName1 : "") + ", " + item.countryName,
+	        value: item.name
+	      }
+	    }));
+	  }
+	});
+	},
+	select: function( event, ui ) {
+	log( ui.item ?
+	  "Selected: " + ui.item.label :
+	  "Nothing selected, input was " + this.value);
+	},
+	open: function() {
+	$( this ).removeClass( "ui-corner-all" ).addClass( "ui-corner-top" );
+	},
+	close: function() {
+	$( this ).removeClass( "ui-corner-top" ).addClass( "ui-corner-all" );
+	}
+	});
+//	$("body").on("focusin", "input", function(){console.log("hello");} );
+	$("body").on("keydown", "#enter", function(event){
+//		console.log(event);
+		if(event.keyCode == 186){
+			event.preventDefault(); 
+			var y = $(this).val().trim();
+			if( y.length > 0 ){ 
+				$(this).before("<span class='value'>"+y+"</span>"); $(this).val('');
+				}
+		}else if(event.keyCode == 8){
+			var y = $(this).val().trim();
+			if( y.length == 0 ){ 
+				$(this).val( $(this).siblings(".value").last().text() );
+				$(this).siblings(".value").last().remove();
+				}
+		}
+		var t = $(this).val()+String.fromCharCode(event.keyCode);
+		$("#hspan").html( t.replace(/ /g,"&nbsp;") );
+		var w = Math.max($("#hspan").width(),15);
+		$(this).width(w);
+		});
+	$("body").on("click",".value", function(){
+		var x = $(this).text();
+		$("#hspan").text(x);
+		var w = Math.max($("#hspan").width(),15);
+		$(this).siblings("#enter").last().val(x).width(w).focus();
+		$(this).remove();
+		});
+});
+</script>
+</head>
+<body>
+<div>
+<select>
+	<option value="1">One</option>
+	<option value="2">Two</option>
+</select>
+<input type="text" id="city">
+</div>
+<p style="width:300px; overflow:hidden;">
+<input type="text" id="enter">
+</p>
+<div style="height:0px; overflow:hidden;"><span id="hspan"></span></div>
+</body>
+</html>

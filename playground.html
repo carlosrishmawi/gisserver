@@ -1,0 +1,133 @@
+<html>
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="jquery/jquery-ui-1.10.3.custom.min.js"></script>
+<link rel="stylesheet" href="jquery/jquery-ui-1.10.3.custom.min.css" />
+<script>
+$("document").ready(function(){
+   	$("body").on("click",".lv",function(){
+		$(this).parent().siblings(".opts").toggle({duration:200});
+		});
+   	$("body").on("click",".scroll button",function(){
+		
+		});	
+	});
+</script>
+<style>
+.fs{
+    float:left;
+    position:relative;
+}
+.cv{
+    float:left;
+    overflow:hidden;
+    position:relative;
+}
+.cv:hover .lv{
+    padding:3px 40px 3px 10px;
+}
+.cv:hover .del{   
+    opacity:1; filter:alpha(opacity=100);
+    right:0px;
+}
+.lv{
+    padding:3px 25px;
+    background:lightgray;
+    color:gray;
+    font-weight:bold;
+    line-height:20px;
+    height:20px;
+    border-radius:4px;
+    transition:300ms; -webkit-transition:300ms;
+    transition-delay:500ms; -webkit-transition-delay:500ms;
+    cursor:pointer;
+    text-transform:uppercase;
+}
+.del{
+    color:gray;    
+    position:absolute;
+    transition:300ms, right 0s; -webkit-transition:300ms, right 0s;
+    transition-delay:500ms; -webkit-transition-delay:500ms;    
+    right:-30px;
+    width:26px;
+    height:26px;
+    padding:0px;
+    line-height:26px;
+    text-align:center;
+    cursor:pointer;
+    overflow:hidden;
+    font-weight:800;
+    border-radius:4px;
+    opacity:0; filter:alpha(opacity=0);
+    font-family:Arial;
+    font-size:22px;
+}
+.del:hover+.lv, .del:hover{
+    transition-delay:0s; -webkit-transition-delay:0s;
+    color:red;
+    background:pink;
+}
+.opts{
+    display:none;
+    position:absolute;
+    top:28px;
+    left:0px;
+    height:135px;
+    width:150px;
+    background:gray;
+    border-radius:4px;
+    overflow:hidden;
+    padding:5px 0px;
+}
+.opts ul{
+   height:135px;
+   overflow-y:auto;
+   width:200px;
+   list-style:none;
+   padding:0px;
+   margin:0px;
+}
+.opts ul li{
+   display:block;
+   background:none;
+   border:none;
+   color:white;
+   cursor:pointer;
+   width:130px;
+   padding:5px;
+   border-radius:4px;
+   margin:0px 5px;
+}
+.opts li:hover{
+   background:darkgray;
+}
+</style>
+<script>
+
+</script>
+</head>
+<body>
+<div class="fs">
+    <div class="cv">
+        <input type="hidden" val="1" />
+        <div class="del">&times</div>
+        <div class="lv">One</div>        
+    </div>
+    <div class="opts">
+        <ul>
+	    <li>One<input type="hidden" val="1" /></li>
+	    <li>Two<input type="hidden" val="2" /></li>
+	    <li>Three<input type="hidden" val="3" /></li>
+	    <li>Four<input type="hidden" val="4" /></li>
+	    <li>Five<input type="hidden" val="5" /></li>
+	    <li>Six<input type="hidden" val="6" /></li>
+	    <li>Seven<input type="hidden" val="7" /></li>
+	    <li>Eight<input type="hidden" val="8" /></li>
+	    <li>Nine<input type="hidden" val="9" /></li>
+	    <li>Ten<input type="hidden" val="10" /></li>
+	    <li>Eleven<input type="hidden" val="11" /></li>
+	    <li>Twelve<input type="hidden" val="12" /></li>	    	    	    	    
+        </ul>
+    </div>
+</div>
+</body>

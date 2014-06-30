@@ -1,0 +1,418 @@
+ <!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width,user-scalable=no">
+    <!--The viewport meta tag is used to improve the presentation and behavior of the samples 
+      on iOS devices-->
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>M1 Emailer</title>
+    
+    <link rel="stylesheet" href="http://js.arcgis.com/3.8/js/dojo/dijit/themes/nihilo/nihilo.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.8/js/esri/css/esri.css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="jquery/jquery-ui-1.10.3.custom.min.js"></script>
+    <style>
+      html, body, #mainWindow {
+        font-family: sans-serif; 
+        height: 100%; 
+        width: 100%; 
+        }
+      html, body {
+        margin: 0; 
+        padding: 0;
+        }
+      #header {
+        overflow: auto;
+        padding: 0.5em;
+        }
+      #sendDiv{
+      	position:absolute;
+      	height:100%;
+      	width:100%;
+      	z-index:100;
+      	display:none;
+      	top:0; left:0;
+      	background:gray;
+      	background:rgba(0,0,0,0.5);
+        }
+      #hide{
+        background-image:url('http://www.datadrivendetroit.org/swm/images/loading3.gif');
+        background-position:center;
+        background-repeat:no-repeat;
+        position:absolute; 
+        height:100%; 
+        width:100%; 
+        top:0; 
+        left:0; 
+        z-index:0;
+        }
+      #sendForm{
+	width:300px;
+	background:white;
+	margin:0px auto;
+	border:1px solid gray;
+	padding:0px 15px;
+	box-shadow:1px 1px 5px rgba(0, 0, 0, 0.8);
+	position:relative;
+	display:block;
+	top:7%;
+	height:80%;
+	z-index:5;
+	overflow-y:auto;
+	overflow-x:hidden;
+        }
+      #sendForm p{
+        margin:0px 0px 5px 0px;
+        font-size:14px;
+        font-weight:bold;
+        }
+      #sendForm input, textarea, select{
+        width:278px;
+        padding:10px;
+        font-size:12px;	
+        margin:0px 0px 10px;
+        border: 1px solid rgb(199, 199, 199);
+        font-family:Arial,sans-serif;
+        transition:200ms;
+        -webkit-transtion:200ms;        
+        }
+      #sendForm textarea{
+        height:80px;
+        }
+      #sendForm #submit{
+        width: auto;
+        font-weight: bold;
+        border: none;
+        border-radius: 4px;
+        color: white;
+        background: rgb(0, 153, 255);
+        box-shadow: 1px 1px 3px rgb(54, 54, 54);
+        font-size: 16px;
+        padding:6px 10px;
+        text-shadow:1px 1px 2px black;
+        cursor:pointer;
+        }
+      #sendForm #submit:hover{
+        background:rgb(0,66,184);
+        }
+      #sendForm #submit.sending:hover, #sendForm #submit.sending{
+        background:lightgray !important;
+        color:white !important;
+        box-shadow:none !important;
+        text-shadow:0px 0px 0px black !important;
+        cursor:default !important;
+        }
+      #sendForm label{
+        font-size:14px;
+        text-transform:uppercase;
+        font-weight:bold;
+        display:block;
+        margin:10px 0px;
+        }
+      #sendForm .green{
+        width:100%;
+        background-color:#95ca78;
+        border-bottom:solid 1px #8AA000;
+        padding:10px 0px 10px 5px;
+        margin-bottom: 8px;
+        font-weight:bold;
+        text-align:left;
+        }
+      #sendForm .red{
+        color:#E8514A;
+        font-weight:bold;
+        display:inline-block;
+        font-size: 12px;
+        }	
+      #sendForm .error{
+        background: #FFE0DF;
+        }
+      #errorMessage{
+        color:red;
+        font-weight:bold;
+        display:none;
+        }
+      #successMessage{
+        color:green;
+        font-weight:bold;
+        display:none;        
+        }
+      #recipients{
+        height:75px;
+        overflow-y:scroll;
+        overflow-x:hidden;
+        border:1px solid rgb(199, 199, 199);
+        white-space:nowrap;
+        padding:0px;
+        }
+      #recipients label, #recipients input{
+        margin:0px 5px;
+        cursor:pointer;
+        line-height:25px;
+        display:inline !important;
+        }
+      #recipients input{
+        width:auto !important;
+        }
+      #recipients label{
+        width:300px;
+        font-weight:normal;
+        margin:0px 5px !important;
+        font-size:12px;
+        text-align:left;  
+        }
+      .recipient{
+        width:500px;
+        }
+      .recipient:hover{
+        background:#CcCcCc;
+        }
+    </style>
+    
+    <script src="http://js.arcgis.com/3.8/"></script>
+    <script>
+      var map, toolbar, symbol, geomTask, graphic, featureLayer, layer;
+      var sending=false;
+
+      require([
+        "esri/map", "esri/layers/FeatureLayer", "esri/layers/DynamicMapServiceLayer",
+        "esri/tasks/query", "esri/toolbars/draw",
+        "esri/graphic",
+	"esri/InfoTemplate",
+        "esri/symbols/SimpleMarkerSymbol",
+        "esri/symbols/SimpleLineSymbol",
+        "esri/symbols/SimpleFillSymbol", "dojo/_base/Color",
+	"esri/renderers/SimpleRenderer",
+        "dojo/parser", "dijit/registry",
+        "esri/config", "dojo/_base/Color", "dojo/dom", "dojo/domReady!",
+        "dijit/layout/BorderContainer", "dijit/layout/ContentPane", 
+        "dijit/form/Button", 
+      ], function(
+        Map, FeatureLayer, DynamicMapServiceLayer,  Query,
+        Draw, Graphic, InfoTemplate,
+        SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, Color,  
+        SimpleRenderer, parser, registry,
+        esriConfig, Color, dom
+      ) {
+        parser.parse();
+        esriConfig.defaults.io.proxyUrl = "/proxy";
+
+	var startExtent = new esri.geometry.Extent(-9246500.52, 5210129.71, -9243598.127, 5212185.95, new esri.SpatialReference({wkid:102100}) );
+
+        map = new Map("map", {
+          basemap: "gray",
+          extent: startExtent
+        });
+        
+        map.on("load", createToolbar);
+
+	layer = new esri.layers.ArcGISDynamicMapServiceLayer("http://gis.datadrivendetroit.org/arcgis/rest/services/DDPDemo/MapServer");
+	layer.setVisibleLayers([15]);
+
+        //add the census block points in on demand mode. Note that an info template has been defined so when 
+        //selected features are clicked a popup window will appear displaying the content defined in the info template.
+        featureLayer = new FeatureLayer("http://gis.datadrivendetroit.org/arcgis/rest/services/DDPDemo/MapServer/15",{
+          infoTemplate: new InfoTemplate("Block: ${BLOCK}", "${*}"),
+          outFields: ["OBJECTID","Email"]
+        });
+
+        // selection symbol used to draw the selected census block points within the buffer polygon
+        var symbol = new SimpleMarkerSymbol(
+          SimpleMarkerSymbol.STYLE_CIRCLE, 
+          12, 
+          new SimpleLineSymbol(
+            SimpleLineSymbol.STYLE_SOLID, 
+            new Color([0, 56, 120, 0.9]), 
+            1
+          ),
+          new Color([23, 131, 255, 1.0])
+        );
+        featureLayer.setSelectionSymbol(symbol); 
+        
+        //make unselected features invisible
+        var nullSymbol = new SimpleMarkerSymbol().setSize(0);
+        featureLayer.setRenderer(new SimpleRenderer(nullSymbol));
+        
+        map.addLayers([featureLayer,layer]);
+
+        // loop through all dijits, connect onClick event
+        // listeners for buttons to activate drawing tools
+        registry.forEach(function(d) {
+          // d is a reference to a dijit
+          // could be a layout container or a button
+          if ( d.declaredClass === "dijit.form.Button" && d.class == "draw" ) {
+            d.on("click", activateTool);
+          }
+        });
+
+        function activateTool() {
+          map.graphics.clear();
+          var tool = this.label.toUpperCase().replace(/ /g, "_");
+          toolbar.activate(Draw[tool]);
+//        map.hideZoomSlider();
+        }
+
+        function createToolbar(themap) {
+          toolbar = new Draw(map);
+          toolbar.on("draw-end", addToMap);
+        }
+
+        function addToMap(evt) {
+          var symbol;
+          toolbar.deactivate();
+//        map.showZoomSlider();
+          switch (evt.geometry.type) {
+            case "point":
+            case "multipoint":
+              symbol = new SimpleMarkerSymbol();
+              break;
+            case "polyline":
+              symbol = new SimpleLineSymbol();
+              break;
+            default:
+              symbol = new SimpleFillSymbol(
+	          SimpleFillSymbol.STYLE_NULL,
+	          new SimpleLineSymbol(
+	            SimpleLineSymbol.STYLE_SHORTDASHDOTDOT,
+	            new Color([105, 105, 105]),
+	            2
+	          ), new Color([255, 255, 0, 0.25])                            
+              );
+              break;
+          }
+          graphic = new Graphic(evt.geometry, symbol);
+          
+          map.graphics.add(graphic);
+          var query = new Query();
+          query.geometry = graphic.geometry.getExtent();
+          featureLayer.queryFeatures(query,  selectInBuffer);
+                    
+        }
+        
+        function selectInBuffer(response){
+          var feature;
+          f = response.features;
+          window.features = [];
+          window.inBuffer = [];
+          //filter out features that are not actually in buffer, since we got all points in the buffer bounding box
+          for (var i = 0; i < f.length; i++) {
+            feature = f[i];
+            if(graphic.geometry.contains(feature.geometry)){
+              inBuffer.push(feature.attributes[featureLayer.objectIdField]);
+              features.push(feature);
+            }
+          }
+          var query = new Query();
+          query.objectIds = inBuffer;
+          //use a fast objectIds selection query (should not need to go to the server)
+          featureLayer.selectFeatures(query, FeatureLayer.SELECTION_NEW, function(results){            
+          });
+	  if(features.length>0){
+            dijit.byId("download").setDisabled(false);
+            dijit.byId("email").setDisabled(false);
+            }
+          dijit.byId("clear").setDisabled(false);
+        }                
+      });
+      function downloadCSV(){
+     	var url = featureLayer.url.slice(7,-3);
+     	var token = featureLayer.credential.token;
+	window.ids = [];
+     	for(var f in features){
+     		ids.push( "OBJECTID="+features[f].attributes.OBJECTID );
+     	}
+     	where = encodeURIComponent(ids.join(" OR "));
+     	window.test = 'http://www.datadrivendetroit.org/gisserver/csv.php/?url='+url+'&token='+token+'&where='+where+'&lyr=14&name=SELECTION';
+	window.open( 'http://www.datadrivendetroit.org/gisserver/csv.php/?url='+url+'&token='+token+'&where='+where+'&lyr=14&name=SELECTION', "_blank");	
+      }
+      function clear(){
+    	map.graphics.clear();
+    	featureLayer.clearSelection();
+        dijit.byId("download").setDisabled(true);
+        dijit.byId("email").setDisabled(true); 
+        dijit.byId("clear").setDisabled(true);         
+      }
+      function showEmail(){      	
+      	$("#sendForm .error").removeClass("error");
+      	$("#sendDiv").fadeIn("fast");
+        var recipients = "";          
+        for(x in features){
+          var em = features[x].attributes.Email;
+          recipients+="<div class='recipient'>";
+          recipients+="<input id='r"+x+"' type='checkbox' value='"+em+"' name='recipients' checked>";
+          recipients+="<label for='r"+x+"'>"+em+"</label><br>"; 
+          recipients+="</div>";
+          }
+        $("#recipients").html(recipients)
+      }
+      function sendEmail(){
+        if(sending===false){
+          sending = true;
+          $("#sendForm .error").removeClass("error");
+          $("#submit").addClass("sending").val("Sending . . .");
+          var data = $("#sendForm").serializeArray();
+          //var m = [];          
+          //for(x in features){
+          //m.push(features[x].attributes.Email); 
+          //}
+          //data.push({"name":"recipients","value":m.join(";") });        
+          $.post("send.php", data , function(r){          
+            if(r.Success === true){
+	      $("#errorMessage").hide();
+	      $("#successMessage").fadeIn(200);
+	      document.getElementById("sendForm").reset()
+	    }else{
+	      e = r.Errors;
+	      e.indexOf("subject")>=0 && $("#sendForm #subject").addClass("error");
+	      e.indexOf("message")>=0 && $("#sendForm #message").addClass("error");
+	      $("#errorMessage").fadeIn(200);
+	      $("#successMessage").hide();	      
+	    }
+	    $("#submit").val("Send").removeClass("sending");	    
+          },"json");
+          sending = false;
+        }
+      }
+      function hideEmail(){
+        if(sending===false){
+          document.getElementById("sendForm").reset()
+          $("#successMessage, #errorMessage").hide();
+          $("#sendDiv").fadeOut("fast");
+        }
+      }
+    </script>
+  </head>
+  <body class="nihilo">
+
+  <div id="mainWindow" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline'">
+    <div id="header" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">
+      <button class="draw" data-dojo-type="dijit/form/Button">Polygon</button>
+      <button class="draw" data-dojo-type="dijit/form/Button">Freehand Polygon</button>
+      <button class="draw" data-dojo-type="dijit/form/Button">Circle</button>
+      <button id="clear" data-dojo-type="dijit/form/Button" onclick="clear()" disabled="true">Clear</button>
+      <button id="email" data-dojo-type="dijit/form/Button" onclick="showEmail()" disabled="true">Email</button>
+      <button id="download" data-dojo-type="dijit/form/Button" onclick="downloadCSV()" disabled="true">Download CSV</button>
+    </div>
+    <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"></div>
+  </div>
+
+  <div id="sendDiv">
+    <div id="hide" onclick="hideEmail()"></div>
+      <form id="sendForm"> 
+        <p style="margin:15px 0px 10px;">Complete the form below to send emails to your selected recipients.</p>
+        <p>Required fields *</p>
+	<label>Recipients *</label> 
+	<div id="recipients"></div>      
+        <label for="subject">Subject *</label> 
+        <input name="subject" id="subject" type="text" />
+        <label for="message">Message *</label>
+        <textarea name="message" id="message" rows="4"></textarea> 
+        <input name="send" id="submit" type="button" value="Send" onclick="sendEmail(this)" />
+        <p id="errorMessage">Please complete the required fields.</p>
+        <p id="successMessage">Messages sent.</p>
+    </form>     
+  </div>
+
+  </body>
+</html>
