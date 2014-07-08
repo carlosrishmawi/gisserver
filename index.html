@@ -1,0 +1,316 @@
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=7" />
+<title>
+	DDP WEBMAP
+</title>
+<link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon">
+<link rel="icon" href="images/favicon.ico" type="image/x-icon">
+<script>
+	// (function () {
+	// 	if (!document.URL.match("http://www")) {
+	// 		window.location.assign("http://www.datadrivendetroit.org/gisserver/filter.html")
+	// 	}
+	// })();
+</script>
+<link href='http://fonts.googleapis.com/css?family=Roboto+Slab:400,700' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/3.2/js/dojo/dijit/themes/tundra/tundra.css">
+<link rel="stylesheet" type="text/css" href="http://serverapi.arcgisonline.com/jsapi/arcgis/3.2/js/esri/css/esri.css" />
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="jquery/jquery-ui-1.10.3.custom.min.js"></script>
+<link rel="stylesheet" href="jquery/jquery-ui-1.10.3.custom.min.css" />
+
+<style type="text/css">
+html, body {height:100%; width:100%; margin:0px; padding:0px; font-family: 'Roboto Slab',Arial,san-serif;} 
+
+#leftPane{width:20%; padding:0px; border:none; min-width:275px; max-width:350px;}
+
+#legendPane{border: solid #97DCF2 1px;} 
+
+.infowindow .window .top .right .user .titlebar .title { font-family:Arial, Helvetica, sans-serif; font-weight:bold; font-size:14pt; } 
+
+.infowindow .window .top .right .user .content {font-style:italic; font-weight:bold; font-size:10pt;}
+
+.dijitBorderContainer, .dijitGutter{background-color:#fff !important;}
+
+.ctitle{font-size:12px; border-bottom:1px solid darkgray}
+.info{}
+
+#title{font-size:30px; font-weight:800; color:rgb(36, 36, 36); height:41px; line-height:41px; float:left; padding:0px 5px; 
+	text-shadow:1px 1px 2px rgb(177, 177, 177); text-transform:uppercase; letter-spacing:1px; word-spacing:2px}
+#title span{font-size:26px}
+#logo{float:right; height:41px; width:83px; background:url(images/small_d3_logo.png); background-repeat:no-repeat; display:block; padding:5px; margin:-5px; background-position:center;}
+#logo:hover{background-color:rgb(250,227,185);}
+.hbutton{
+  display: block;
+  float: right;
+  height: 20px;
+  padding: 5px 7px;
+  margin: 11px 15px 0px 0px;
+  font: normal bold 14px/20px Arial,sans-serif;
+  text-decoration: none;
+  background: rgb(155, 155, 155);
+  color: white;
+  border-radius: 5px;
+  transition:200ms;
+  -webkit-transition:200ms;
+  }
+.hbutton:hover{
+  background-color:gray;
+  }
+
+.lyr h2{font-size:14px; margin:0px 0px 5px; border-bottom:2px groove #EeEeEe; padding:3px 0px;}
+.lyr p{font-size:12px; margin:0px 0px 5px;}
+.lyr div{overflow:hidden; font-size:12px; margin:0px 0px 5px; }
+.lyr div a{font-size:12px; margin-right:5px; text-decoration:none;}
+.lyr {margin-bottom:25px}
+#source{padding:10px 5px 0px;}
+
+</style>
+<script type="text/javascript">
+	var djConfig = {
+		parseOnLoad: true,
+		packages: [{
+			"name": "agsjs",
+			"location": 'http://www.datadrivendetroit.org/project_pages/ddp/agsjs'
+			//	"location": 'http://gmaps-utility-gis.googlecode.com/svn/tags/agsjs/2.01/xbuild/agsjs' // for xdomain load
+		}]
+	};
+</script>
+<script type="text/javascript" src="http://serverapi.arcgisonline.com/jsapi/arcgis/?v=3.2"></script>
+<script type="text/javascript" src="query.js"></script>
+<script type="text/javascript" src="csv.js"></script>
+<link rel="stylesheet" href="query.css" />
+<script type="text/javascript">
+	dojo.require("dijit.layout.BorderContainer");
+	dojo.require("dijit.layout.ContentPane");
+	dojo.require("esri.map");
+	dojo.require("esri.virtualearth.VETiledLayer");
+	dojo.require("esri.dijit.Legend");
+	dojo.require("dijit.layout.AccordionContainer");
+	dojo.require("esri.arcgis.utils");
+	dojo.require("dijit.form.CheckBox");
+	dojo.require("esri.layers.FeatureLayer");
+	dojo.require("dojo.fx"); // needed since jsapi3.0
+	dojo.require("agsjs.dijit.TOC");
+	dojo.require("dojo.parser");
+	dojo.require("dijit.form.Select");
+
+	dojo.require("esri.IdentityManager");
+	dojo.require("esri.tasks.query");
+
+	var map, layer, parcels, parcel, results, layerInfo, basemap;
+	var patt = /\.()/;
+
+	
+
+	function init() {
+		var initExtent = new esri.geometry.Extent({
+			"xmin": -9246500.52,
+			"ymin": 5210129.71,
+			"xmax": -9243598.127,
+			"ymax": 5212185.95,
+			"spatialReference": {
+				"wkid": 102100
+			}
+		});
+
+		//setup the popup window  
+		var popup = new esri.dijit.Popup({
+			fillSymbol: new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 0, 0]), 2), new dojo.Color([255, 255, 0, 0.25]))
+		}, dojo.create("InfoDiv"));
+
+
+		map = new esri.Map("map", {
+			infoWindow: popup,
+			extent: initExtent
+		});
+
+		//Creates the Virtual Earth layer to add to the map
+		veTileLayer = new esri.virtualearth.VETiledLayer({
+			bingMapsKey: 'ArC3mTCM96FTCSBtQLcRkhiZJ8RZA3tQMjfx7rDRDrpkbzMZYq5tmmC6ukkXzuDS',
+			mapStyle: esri.virtualearth.VETiledLayer.MAP_STYLE_ROAD
+		});
+		map.addLayer(veTileLayer);
+		veTileLayer.setVisibility(false);
+
+	        basemap = new esri.layers.ArcGISTiledMapServiceLayer("http://gis.datadrivendetroit.org/arcgis/rest/services/Basemaps/D3_Standard_Basemap/MapServer");
+//		basemap = new esri.layers.ArcGISTiledMapServiceLayer("http://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer");
+		map.addLayer(basemap);
+
+		layer = new esri.layers.ArcGISDynamicMapServiceLayer("http://gis.datadrivendetroit.org/arcgis/rest/services/DDPDemo/MapServer");
+		
+		dojo.connect(map, 'onLayersAddResult', function (results) {
+			var toc = new agsjs.dijit.TOC({
+				map: map,
+				layerInfos: [{
+					layer: layer,
+					title: "DDP Layers"
+				}]
+			}, 'tocDiv');
+			toc.startup();
+		});
+		map.addLayers([layer]);
+
+		dojo.connect(map, "onLoad", mapReady);
+		dojo.connect(layer, "onLoad", layerReady);
+
+	};
+	
+	function layerReady(layer){
+		cFilter(layer, document.getElementById("filters"), [7] );
+		csvExporter(layer, document.getElementById("csv") );
+		var URL = layer.url+"/layers/?f=json&token="+layer.credential.token;
+		window.LayerData = [];
+		$.ajax({url:URL,
+		    dataType:"json",
+		    success:function(data){ 
+		    	lyrs = data.layers
+		    	LayerData.push(lyrs);
+		    	var src = []; 
+		    	for(x in lyrs){
+			   var c = "<div class='lyr'>";
+			   lyr = lyrs[x];
+			   c+="<h2>"+lyr.name+"</h2>";
+			   c+="<p>"+lyr.description+"</p>";
+			   c+="<div>Source(s): "
+			   var copy = lyr.copyrightText.split(";");
+			   var date = copy[1];
+			   var srcs = copy[0].split("|");
+			   for(x in srcs){
+			   	var s = srcs[x].split("(");
+			   	var u = (s.length==2)? s[1].replace(")","") : "#";
+			   	c+="<a href='"+u+"' target='_blank'>"+s[0]+"</a>";
+			   	}
+			   c += "</div>";
+			   c += "<div>Date: "+date+"</div>";
+			   c += "</div>";
+			   src.push(c);
+			   }
+			   $("#source").append(src.join(""));
+		    	} 
+		    });
+	};
+
+	function mapReady(map) {
+		dojo.connect(map, "onClick", executeIdentifyTask);
+
+		//create identify tasks and setup parameters 
+		identifyTask = new esri.tasks.IdentifyTask("http://gis.datadrivendetroit.org/arcgis/rest/services/DDPDemo/MapServer");
+
+		identifyParams = new esri.tasks.IdentifyParameters();
+		identifyParams.tolerance = 3;
+		identifyParams.returnGeometry = true;
+		identifyParams.layerOption = esri.tasks.IdentifyParameters.LAYER_OPTION_ALL;
+		identifyParams.width = map.width;
+		identifyParams.height = map.height;
+
+
+		//resize the map when the browser resizes
+		dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
+
+		layer.setVisibleLayers([7]);
+	};
+
+	function executeIdentifyTask(evt) {
+		identifyParams.geometry = evt.mapPoint;
+		identifyParams.mapExtent = map.extent;
+		identifyParams.layerIds = layer.visibleLayers;
+
+		var deferred = identifyTask.execute(identifyParams);
+		deferred.addCallback(function (response) {
+			// response is an array of identify result objects    
+			// Let us return an array of features.
+			// results = response;
+			return dojo.map(response, function (result) {
+
+				var feature = result.feature;
+				results = feature.attributes;
+				var content = "";
+				for (x in results) {
+					if (patt.test(x) == false) {
+						content += "<div>" + x + ": " + results[x] + "</div>";
+					}
+				}
+				var template = new esri.InfoTemplate("", "<div><b>" + result.layerName + "</b></div>" + content);
+				feature.setInfoTemplate(template);
+
+				return feature;
+			});
+		});
+
+		// InfoWindow expects an array of features from each deferred
+		// object that you pass. If the response from the task execution 
+		// above is not an array of features, then you need to add a callback
+		// like the one above to post-process the response and return an
+		// array of features.
+		map.infoWindow.setFeatures([deferred]);
+		map.infoWindow.show(evt.mapPoint);
+	};
+	dojo.addOnLoad(init);
+
+	function base_change(b) {
+		if (b == 3) {
+			veTileLayer.setVisibility(false);
+			basemap.setVisibility(true);
+		} else {
+			veTileLayer.setVisibility(true);
+			basemap.setVisibility(false);
+			if (b == 2) {
+				veTileLayer.setMapStyle(esri.virtualearth.VETiledLayer.MAP_STYLE_AERIAL);
+			}
+			if (b == 1) {
+				veTileLayer.setMapStyle(esri.virtualearth.VETiledLayer.MAP_STYLE_AERIAL_WITH_LABELS);
+			}
+		}
+	}
+	function Print_Map(){
+		var v = layer.visibleLayers;
+		var e = map.extent;
+		var url = 'http://www.datadrivendetroit.org/gisserver/printable.php/?';
+		url += 'xmin='+e.xmin+'&ymin='+e.ymin+'&xmax='+e.xmax+'&ymax='+e.ymax+'&token='+layer.credential.token;
+		url += '&visible=['+v.join(',')+']';
+		window.open(encodeURI(url),"_blank", "", "", "false");
+	}
+</script>
+</head>
+
+<body class="tundra">
+	<div id="mainWindow" dojotype="dijit.layout.BorderContainer" design="headline" gutters="true" style="width:100%; height:100%;">
+		<div id="header" dojotype="dijit.layout.ContentPane" region="top" style="background:rgb(225,225,225);">		
+			<div id="title">DDP WEBMAP</div>
+			<a id="logo" href="http://www.datadrivendetroit.org/" target="_blank"></a>
+			<a class="hbutton" href="#" onclick="Print_Map()">Print Map</a>
+			<a class="hbutton" href="http://m-1rail.com/wp-content/datadet/mailer.html" target="_blank">Send Emails</a>
+		</div>
+		<div id="leftPane" class="roundedCorners" dojotype="dijit.layout.ContentPane" region="left">
+			<div dojoType="dijit.layout.AccordionContainer">
+				<div dojoType="dijit.layout.ContentPane" title="Layer Control" selected="true">
+					<div id="tocDiv"></div>
+					<p style="margin:20px 4px 4px 4px; font-weight:bold; font-size:16px;">Baselayer Options</p>
+					<button dojoType="dijit.form.Button" onClick="base_change(1)">Aerial with labels</button>
+					<button dojoType="dijit.form.Button" onClick="base_change(2)">Aerial</button>
+					<button dojoType="dijit.form.Button" onClick="base_change(3)">Roads</button> 
+				</div>
+				<div dojoType="dijit.layout.ContentPane" title="Filters" selected="false">
+					<div id="filters"></div>
+				</div>
+				<div dojoType="dijit.layout.ContentPane" title="Export CSV" selected="false">
+					<div id="csv"></div>
+				</div>
+				<div dojoType="dijit.layout.ContentPane" title="Source Info" selected="false">
+					<div id="source"></div>
+				</div>
+			</div>
+		</div>
+		<div id="centerPane" dojotype="dijit.layout.BorderContainer" class="roundedCorners" region="center" gutters="false">
+			<div id="map" dojotype="dijit.layout.ContentPane" class="shadow" region="center" style="position:relative; overflow:hidden; background:#E9E9E9;"></div>
+		</div>
+	</div>
+</body>
+</html>
